@@ -1,8 +1,9 @@
 package main
 
 import (
-	"dar/internal/cmd/root"
 	"os"
+
+	"github.com/delavalom/dar/internal/cmd/root"
 )
 
 type exitCode int
@@ -19,12 +20,7 @@ func init() {
 	os.Getenv("DAR_PATH")
 }
 
-func main() {
-	code := mainRun()
-	os.Exit(int(code))
-}
-
-func mainRun() exitCode {
+func run() exitCode {
 	rootCommand, err := root.NewRootCommand()
 	if err != nil {
 		return exitError
@@ -35,4 +31,9 @@ func mainRun() exitCode {
 	}
 
 	return exitOK
+}
+
+func main() {
+	code := run()
+	os.Exit(int(code))
 }
