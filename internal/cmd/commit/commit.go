@@ -18,11 +18,6 @@ func NewCommitCommand() *cobra.Command {
 				fmt.Println("error: commit message must be wrapped in double quotes")
 				os.Exit(1)
 			}
-			fmt.Println(msg)
-			// if validateMessage(msg) != nil {
-			// 	fmt.Println("error: commit message must be wrapped in double quotes")
-			// 	os.Exit(1)
-			// }
 
 			fmt.Println("Committing changes to the repository...")
 			file, err := os.Create(".dar/COMMIT_EDITMSG")
@@ -31,7 +26,7 @@ func NewCommitCommand() *cobra.Command {
 			}
 			defer file.Close()
 
-			if _, err = file.WriteString(msg); err != nil {
+			if _, err = file.Write([]byte(msg)); err != nil {
 				panic(err)
 			}
 
@@ -43,11 +38,4 @@ func NewCommitCommand() *cobra.Command {
 	commitCommand.MarkFlagRequired("message")
 
 	return commitCommand
-}
-
-func validateMessage(msg string) error {
-	if len(msg) < 2 || msg[0] != '"' || msg[len(msg)-1] != '"' {
-		return fmt.Errorf("commit message must be wrapped in double quotes")
-	}
-	return nil
 }
