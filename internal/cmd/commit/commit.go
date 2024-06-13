@@ -9,15 +9,20 @@ import (
 
 func NewCommitCommand() *cobra.Command {
 	commitCommand := &cobra.Command{
-		Use:   "commit [-m OPTIONS] <msg>",
+		Use:   "commit [-m | --message] <msg>",
 		Short: "Record changes to the repository",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) == 0 {
-				fmt.Println("error: pathspec required")
+			msg, err := cmd.Flags().GetString("message")
+			if err != nil {
+				fmt.Println("error: commit message must be wrapped in double quotes")
 				os.Exit(1)
 			}
-			msg := args[0]
+			fmt.Println(msg)
+			// if validateMessage(msg) != nil {
+			// 	fmt.Println("error: commit message must be wrapped in double quotes")
+			// 	os.Exit(1)
+			// }
 
 			fmt.Println("Committing changes to the repository...")
 			file, err := os.Create(".dar/COMMIT_EDITMSG")
@@ -38,4 +43,11 @@ func NewCommitCommand() *cobra.Command {
 	commitCommand.MarkFlagRequired("message")
 
 	return commitCommand
+}
+
+func validateMessage(msg string) error {
+	if len(msg) < 2 || msg[0] != '"' || msg[len(msg)-1] != '"' {
+		return fmt.Errorf("commit message must be wrapped in double quotes")
+	}
+	return nil
 }
