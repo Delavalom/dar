@@ -12,3 +12,15 @@ func New(b []byte) string {
 
 	return sha1_hash
 }
+
+func Verify(b []byte, sha1_hash string) bool {
+	return sha1_hash == New(b)
+}
+
+func Read(sha1_hash string) []byte {
+	b, err := hex.DecodeString(sha1_hash)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}

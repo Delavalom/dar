@@ -1,8 +1,11 @@
 package storage
 
 import (
+	"compress/zlib"
 	"fmt"
 	"os"
+
+	"github.com/delavalom/dar/internal/hash"
 )
 
 type Hash string
@@ -30,6 +33,7 @@ func (s *Storage) AddTree(hash Hash, blob Blob) {
 
 var IgnoreFiles = map[string]bool{
 	".git": true,
+	".dar": true,
 }
 
 func ReadFiles(files []os.DirEntry, prefix string) {
@@ -39,11 +43,25 @@ func ReadFiles(files []os.DirEntry, prefix string) {
 			filePath = fmt.Sprintf("%s/%s", prefix, filePath)
 		}
 		if !file.IsDir() {
-			fileInfo, err := file.Info()
+			content, err := os.ReadFile(filePath)
 			if err != nil {
 				panic(err)
 			}
-			fmt.Println(fileInfo.Name())
+			// fmt.Println(filePath)
+			fmt.Println(file.Type().Perm().String())
+			length := len(content)
+			content = append([]byte("\n"), content...)
+			content = append([]byte{byte(length)}, content...)
+			key := hash.New(content)
+			file, err := os.Create(fmt.Sprintf(".dar/objects/%s", key))
+			if err != nil {
+				panic(err)
+			}
+			_, err = zlib.NewWriter(file).Write(content)
+			if err != nil {
+				panic(err)
+			}
+
 		} else {
 			if IgnoreFiles[filePath] {
 				continue

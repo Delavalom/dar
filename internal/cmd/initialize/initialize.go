@@ -26,6 +26,10 @@ func NewInitCommand() *cobra.Command {
 				panic(err)
 			}
 
+			if err = os.Mkdir(".dar/objects", 0755); err != nil {
+				panic(err)
+			}
+
 			fmt.Println("Initialized empty Dar repository in .dar")
 		},
 	}
