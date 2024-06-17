@@ -1,6 +1,7 @@
 package initialize
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -16,6 +17,14 @@ func NewInitCommand() *cobra.Command {
 				panic(err)
 			}
 
+			configFile, err := os.Create(".dar/config")
+			if err != nil {
+				panic(err)
+			}
+			if err = configFile.Close(); err != nil {
+				panic(err)
+			}
+
 			file, err := os.Create(".dar/HEAD")
 			if err != nil {
 				panic(err)
@@ -27,7 +36,15 @@ func NewInitCommand() *cobra.Command {
 			}
 
 			if err = os.Mkdir(".dar/objects", 0755); err != nil {
-				panic(err)
+				if !errors.Is(err, os.ErrExist) {
+					panic(err)
+				}
+			}
+
+			if err = os.Mkdir(".dar/tmp", 0755); err != nil {
+				if !errors.Is(err, os.ErrExist) {
+					panic(err)
+				}
 			}
 
 			fmt.Println("Initialized empty Dar repository in .dar")
