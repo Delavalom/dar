@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/delavalom/dar/internal/hash"
+	"github.com/delavalom/dar/internal/hashMap"
 )
 
 type Hash string
@@ -36,7 +37,7 @@ var IgnoreFiles = map[string]bool{
 	".dar": true,
 }
 
-func ReadFiles(files []os.DirEntry, prefix string) {
+func ReadFiles(files []os.DirEntry, prefix string, tree map[string]*hashMap.Tree) {
 	for _, file := range files {
 		filePath := file.Name()
 		if prefix != "" {
@@ -47,12 +48,19 @@ func ReadFiles(files []os.DirEntry, prefix string) {
 			if err != nil {
 				panic(err)
 			}
-			// fmt.Println(filePath)
-			fmt.Println(file.Type().Perm().String())
+
 			length := len(content)
 			content = append([]byte("\n"), content...)
 			content = append([]byte{byte(length)}, content...)
 			key := hash.New(content)
+
+			tree[filePath] = &hashMap.Tree{
+				FileContent: key,
+				HasSubTree:  false,
+				FileName:    file.Name(),
+				FileMode:    file.Type().Perm().String(),
+			}
+
 			file, err := os.Create(fmt.Sprintf(".dar/objects/%s", key))
 			if err != nil {
 				panic(err)
@@ -67,10 +75,15 @@ func ReadFiles(files []os.DirEntry, prefix string) {
 				continue
 			}
 			files, err := os.ReadDir(filePath)
+
+			tree[filePath] = &hashMap.Tree{
+				SubTree: make(map[string]*hashMap.Tree),
+			}
+
 			if err != nil {
 				panic("Couldn't open the Directory: " + err.Error())
 			}
-			ReadFiles(files, filePath)
+			ReadFiles(files, filePath, tree[filePath].SubTree)
 		}
 	}
 }
@@ -82,4 +95,13 @@ type File struct {
 	Name    string
 	Content string           // empty if IsDir is true
 	Trees   map[string]*File // empty if IsDir is false
+}
+
+func ReadObjects() {
+	// Read the objects from the .dar/objects directory
+}
+
+type Tmp struct {
+	Key  string
+	Tree map[string]*hashMap.Tree
 }
