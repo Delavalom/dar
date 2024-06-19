@@ -1,30 +1,30 @@
 package storage
 
 import (
-	"bytes"
-	"compress/zlib"
 	"fmt"
-	"io"
 	"os"
 
+	"github.com/delavalom/dar/internal/compression"
 	"github.com/delavalom/dar/internal/hash"
 	"github.com/delavalom/dar/internal/hashMap"
 )
 
-type Storage struct {
-}
-
-func New() *Storage {
-	return &Storage{}
-}
-
-var IgnoreFiles = map[string]bool{
+var IGNORE_FILES = map[string]bool{
 	".git": true,
 	".dar": true,
 	"dar":  true,
 }
 
-func ReadFiles(files []os.DirEntry, prefix string, tree hashMap.HashMap) {
+type Storage interface {
+	WriteTree(files []os.DirEntry, prefix string, tree hashMap.HashMap)
+	WriteFiles(tree hashMap.HashMap)
+}
+
+// WriteTree reads the files and writes them to the tree hash map structure
+// It uses a recursive function to traverse the file system with Depth First Search
+func WriteTree(files []os.DirEntry, prefix string, tree hashMap.HashMap) {
+	compressor := compression.New()
+
 	for _, file := range files {
 		filePath := file.Name()
 		if prefix != "" {
@@ -46,29 +46,10 @@ func ReadFiles(files []os.DirEntry, prefix string, tree hashMap.HashMap) {
 				FileMode:    file.Type().Perm().String(),
 			}
 
-			// creating a new file in the .dar/objects directory with the hash as the name
-			file, err := os.Create(fmt.Sprintf(".dar/objects/%s", key))
-			if err != nil {
-				panic(err)
-			}
-
 			// compressing the content and writing it to the file
-			var buf bytes.Buffer
-
-			w := zlib.NewWriter(&buf)
-			if _, err := w.Write(content); err != nil {
-				panic(err)
-			}
-
-			if err = w.Close(); err != nil {
-				panic(err)
-			}
-
-			if _, err = io.Copy(file, &buf); err != nil {
-				panic(err)
-			}
+			compressor.WriteFile(content, key)
 		} else {
-			if IgnoreFiles[filePath] {
+			if IGNORE_FILES[filePath] {
 				continue
 			}
 			files, err := os.ReadDir(filePath)
@@ -81,12 +62,16 @@ func ReadFiles(files []os.DirEntry, prefix string, tree hashMap.HashMap) {
 			if err != nil {
 				panic("Couldn't open the Directory: " + err.Error())
 			}
-			ReadFiles(files, filePath, tree[filePath].SubTree)
+			WriteTree(files, filePath, tree[filePath].SubTree)
 		}
 	}
 }
 
-func ReadTreeAndWriteFiles(tree hashMap.HashMap) {
+// WriteFiles reads the tree hash map structure and writes the files to the file system
+// It uses a queue to traverse the tree with Breadth First Search
+func WriteFiles(tree hashMap.HashMap) {
+	compressor := compression.New()
+
 	type queueItem struct {
 		path string
 		tree hashMap.HashMap
@@ -122,28 +107,7 @@ func ReadTreeAndWriteFiles(tree hashMap.HashMap) {
 				if !visited[key] {
 					// Create and write the file
 					contentPath := fmt.Sprintf(".dar/objects/%s", file.FileContent)
-					fmt.Println(contentPath)
-					compressedFile, err := os.Open(contentPath)
-					if err != nil {
-						panic(err)
-					}
-					defer compressedFile.Close()
-
-					reader, err := zlib.NewReader(compressedFile)
-					if err != nil {
-						panic("Reading contentFile content: " + err.Error())
-					}
-					defer reader.Close()
-
-					file, err := os.Create(key)
-					if err != nil {
-						panic("Creating file path: " + err.Error())
-					}
-					defer file.Close()
-
-					if _, err = io.Copy(file, reader); err != nil {
-						panic("copy from compressed file to repository file system: " + err.Error())
-					}
+					compressor.ReadAndWriteDecompressedFile(key, contentPath)
 
 					visited[key] = true
 				}

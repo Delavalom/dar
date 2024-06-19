@@ -25,17 +25,6 @@ func NewCommitCommand() *cobra.Command {
 
 			fmt.Println("Committing changes to the repository...")
 
-			// Create a file to store the commit message
-			file, err := os.Create(".dar/COMMIT_EDITMSG")
-			if err != nil {
-				panic(err)
-			}
-			defer file.Close()
-
-			if _, err = file.Write([]byte(msg)); err != nil {
-				panic(err)
-			}
-
 			// Read the tree snapshot from the tmp file
 			treeBytes, err := os.ReadFile(".dar/tmp")
 			if err != nil {
@@ -53,43 +42,7 @@ func NewCommitCommand() *cobra.Command {
 			// Create a snapshot of the repository
 			shot := snapshot.New(string(key), tree, msg)
 
-			// marshal the snapshot to bytes
-			snapshotBytes, err := json.Marshal(shot)
-			if err != nil {
-				panic(err)
-			}
-
-			// Create a file to store the snapshot of the tree
-			snapshotFile, err := os.Create(fmt.Sprintf(".dar/snapshots/%s", key))
-			if err != nil {
-				panic(err)
-			}
-
-			// Write the snapshot to the snapshot file
-			if _, err = snapshotFile.Write(snapshotBytes); err != nil {
-				panic(err)
-			}
-
-			if err = snapshotFile.Close(); err != nil {
-				panic(err)
-			}
-
-			// Create a file to store the commit key
-			indexFile, err := os.Create(".dar/index")
-			if err != nil {
-				panic(err)
-			}
-			defer indexFile.Close()
-
-			// Write the key of the snapshot to the index file
-			if _, err = indexFile.Write([]byte(key)); err != nil {
-				panic(err)
-			}
-
-			// Remove the tmp file
-			if err = os.Remove(".dar/tmp"); err != nil {
-				panic(err)
-			}
+			handleFiles(msg, key, shot)
 
 			fmt.Println("Done!")
 		},
@@ -99,4 +52,55 @@ func NewCommitCommand() *cobra.Command {
 	commitCommand.MarkFlagRequired("message")
 
 	return commitCommand
+}
+
+func handleFiles(msg, key string, shot *snapshot.Commit) {
+	// Create a file to store the commit message
+	file, err := os.Create(".dar/COMMIT_EDITMSG")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	if _, err = file.Write([]byte(msg)); err != nil {
+		panic(err)
+	}
+
+	// marshal the snapshot to bytes
+	snapshotBytes, err := json.Marshal(shot)
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a file to store the snapshot of the tree
+	snapshotFile, err := os.Create(fmt.Sprintf(".dar/snapshots/%s", key))
+	if err != nil {
+		panic(err)
+	}
+
+	// Write the snapshot to the snapshot file
+	if _, err = snapshotFile.Write(snapshotBytes); err != nil {
+		panic(err)
+	}
+
+	if err = snapshotFile.Close(); err != nil {
+		panic(err)
+	}
+
+	// Create a file to store the commit key
+	indexFile, err := os.Create(".dar/index")
+	if err != nil {
+		panic(err)
+	}
+	defer indexFile.Close()
+
+	// Write the key of the snapshot to the index file
+	if _, err = indexFile.Write([]byte(key)); err != nil {
+		panic(err)
+	}
+
+	// Remove the tmp file
+	if err = os.Remove(".dar/tmp"); err != nil {
+		panic(err)
+	}
 }

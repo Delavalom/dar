@@ -1,8 +1,6 @@
 package config
 
 import (
-	"fmt"
-
 	"github.com/spf13/viper"
 )
 
@@ -20,7 +18,6 @@ func Load(path string) (config Config) {
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
 	v.AutomaticEnv()
-	fmt.Println(v.AllKeys())
 
 	if err := v.ReadInConfig(); err != nil {
 		panic(err)
