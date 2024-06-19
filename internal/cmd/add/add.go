@@ -29,7 +29,7 @@ func NewAddCommand() *cobra.Command {
 			tree := hashMap.New()
 
 			// Read files and store them in a tree structure
-			storage.ReadFiles(files, "", tree)
+			storage.WriteTree(files, "", tree)
 
 			// Marshal tree to bytes to store value into a file
 			b, err := json.Marshal(tree)

@@ -21,10 +21,7 @@ type Commit struct {
 }
 
 func New(key string, tree hashMap.HashMap, message string) *Commit {
-	configuration := config.Config{
-		Author: "Luis Angel Arvelo",
-		Email:  "hi@delavalom",
-	}
+	configuration := config.Load(".dar/")
 	return &Commit{
 		Key:  key,
 		Tree: tree,

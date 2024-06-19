@@ -41,7 +41,7 @@ func NewCloneCommand() *cobra.Command {
 
 			// Read tmp but actually should read last commit index tree
 			// then read the files in the object directory and write on the file system
-			storage.ReadTreeAndWriteFiles(commit.Tree)
+			storage.WriteFiles(commit.Tree)
 
 			fmt.Println("Done!")
 		},

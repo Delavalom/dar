@@ -20,7 +20,6 @@ func Load(path string) (config Config) {
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
 	v.AutomaticEnv()
-	fmt.Println(v.AllKeys())
 
 	if err := v.ReadInConfig(); err != nil {
 		panic(err)
@@ -29,6 +28,8 @@ func Load(path string) (config Config) {
 	if err := v.Unmarshal(&config); err != nil {
 		panic(err)
 	}
+
+	fmt.Println(config)
 
 	return
 }

@@ -7,7 +7,9 @@ import (
 
 func New(b []byte) string {
 	h := sha1.New()
-	h.Write(b)
+	if _, err := h.Write(b); err != nil {
+		panic(err)
+	}
 	sha1_hash := hex.EncodeToString(h.Sum(nil))
 
 	return sha1_hash
@@ -15,12 +17,4 @@ func New(b []byte) string {
 
 func Verify(b []byte, sha1_hash string) bool {
 	return sha1_hash == New(b)
-}
-
-func Read(sha1_hash string) []byte {
-	b, err := hex.DecodeString(sha1_hash)
-	if err != nil {
-		panic(err)
-	}
-	return b
 }
