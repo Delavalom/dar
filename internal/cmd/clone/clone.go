@@ -1,10 +1,11 @@
-package add
+package clone
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
 
+	"github.com/delavalom/dar/internal/snapshot"
 	"github.com/delavalom/dar/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -16,22 +17,31 @@ func NewCloneCommand() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println("Cloning file contents to the repository...")
 
-			var tree storage.Tmp
-
-			b, err := os.ReadFile(".dar/tmp")
+			// Read the index file to get the key
+			indexBytes, err := os.ReadFile(".dar/index")
 			if err != nil {
 				panic(err)
 			}
 
-			if err = json.Unmarshal(b, &tree); err != nil {
+			key := string(indexBytes)
+
+			// Read the index snapshot from the snapshots directory
+			snapshotBytes, err := os.ReadFile(fmt.Sprintf(".dar/snapshots/%s", key))
+			if err != nil {
+				panic(err)
+			}
+			var commit snapshot.Commit
+			if err = json.Unmarshal(snapshotBytes, &commit); err != nil {
 				panic(err)
 			}
 
-			// Read tmp but actually should read last commit index tree
-			//
-			for k, v := range tree.Tree {
-				fmt.Println(k, v)
+			if commit.Key != key {
+				panic("There's nothing to commit")
 			}
+
+			// Read tmp but actually should read last commit index tree
+			// then read the files in the object directory and write on the file system
+			storage.ReadTreeAndWriteFiles(commit.Tree)
 
 			fmt.Println("Done!")
 		},
