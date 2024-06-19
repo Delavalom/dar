@@ -2,3 +2,4 @@
 dar
 
 internal/btree/*
+internal/vfs/*
