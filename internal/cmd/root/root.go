@@ -3,6 +3,7 @@ package root
 import (
 	"github.com/delavalom/dar/internal/cmd/add"
 	"github.com/delavalom/dar/internal/cmd/checkout"
+	"github.com/delavalom/dar/internal/cmd/clone"
 	"github.com/delavalom/dar/internal/cmd/commit"
 	"github.com/delavalom/dar/internal/cmd/initialize"
 	"github.com/delavalom/dar/internal/cmd/push"
@@ -23,6 +24,7 @@ func NewRootCommand() (*cobra.Command, error) {
 		commit.NewCommitCommand(),
 		push.NewPushCommand(),
 		checkout.NewCheckoutCommand(),
+		clone.NewCloneCommand(),
 	)
 
 	return cmd, nil
