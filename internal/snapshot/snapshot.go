@@ -7,18 +7,20 @@ import (
 	"github.com/delavalom/dar/internal/hashMap"
 )
 
-type Commit struct {
-	Key      string
-	Tree     *hashMap.Tree
-	Metadata struct {
-		Author  string
-		Date    string
-		Message string
-	}
-	Parent *Commit
+type metadata struct {
+	Author  string `json:"author"`
+	Date    string `json:"date"`
+	Message string `json:"message"`
 }
 
-func New(key string, tree *hashMap.Tree, message string) *Commit {
+type Commit struct {
+	Key      string          `json:"key"`
+	Tree     hashMap.HashMap `json:"tree"`
+	Metadata metadata        `json:"metadata"`
+	Parent   *Commit         `json:"parent"`
+}
+
+func New(key string, tree hashMap.HashMap, message string) *Commit {
 	configuration := config.Config{
 		Author: "Luis Angel Arvelo",
 		Email:  "hi@delavalom",
@@ -26,11 +28,7 @@ func New(key string, tree *hashMap.Tree, message string) *Commit {
 	return &Commit{
 		Key:  key,
 		Tree: tree,
-		Metadata: struct {
-			Author  string
-			Date    string
-			Message string
-		}{
+		Metadata: metadata{
 			Author:  configuration.Author,
 			Date:    time.Now().String(),
 			Message: message,
