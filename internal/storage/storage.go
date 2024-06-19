@@ -1,43 +1,30 @@
 package storage
 
 import (
+	"bytes"
 	"compress/zlib"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/delavalom/dar/internal/hash"
 	"github.com/delavalom/dar/internal/hashMap"
 )
 
-type Hash string
-type Blob string
-
 type Storage struct {
-	Commit map[Hash]Blob
-	Tree   map[Hash]Blob
-	Blob   Blob
 }
 
 func New() *Storage {
-	return &Storage{
-		Commit: make(map[Hash]Blob),
-		Tree:   make(map[Hash]Blob),
-	}
-}
-func (s *Storage) AddBlob(hash Hash, blob Blob) {
-	s.Commit[hash] = blob
-}
-
-func (s *Storage) AddTree(hash Hash, blob Blob) {
-	s.Commit[hash] = blob
+	return &Storage{}
 }
 
 var IgnoreFiles = map[string]bool{
 	".git": true,
 	".dar": true,
+	"dar":  true,
 }
 
-func ReadFiles(files []os.DirEntry, prefix string, tree map[string]*hashMap.Tree) {
+func ReadFiles(files []os.DirEntry, prefix string, tree hashMap.HashMap) {
 	for _, file := range files {
 		filePath := file.Name()
 		if prefix != "" {
@@ -48,12 +35,10 @@ func ReadFiles(files []os.DirEntry, prefix string, tree map[string]*hashMap.Tree
 			if err != nil {
 				panic(err)
 			}
-
-			length := len(content)
-			content = append([]byte("\n"), content...)
-			content = append([]byte{byte(length)}, content...)
+			// creating a new hash of the content
 			key := hash.New(content)
 
+			// adding the file to the tree
 			tree[filePath] = &hashMap.Tree{
 				FileContent: key,
 				HasSubTree:  false,
@@ -61,15 +46,27 @@ func ReadFiles(files []os.DirEntry, prefix string, tree map[string]*hashMap.Tree
 				FileMode:    file.Type().Perm().String(),
 			}
 
+			// creating a new file in the .dar/objects directory with the hash as the name
 			file, err := os.Create(fmt.Sprintf(".dar/objects/%s", key))
 			if err != nil {
 				panic(err)
 			}
-			_, err = zlib.NewWriter(file).Write(content)
-			if err != nil {
+
+			// compressing the content and writing it to the file
+			var buf bytes.Buffer
+
+			w := zlib.NewWriter(&buf)
+			if _, err := w.Write(content); err != nil {
 				panic(err)
 			}
 
+			if err = w.Close(); err != nil {
+				panic(err)
+			}
+
+			if _, err = io.Copy(file, &buf); err != nil {
+				panic(err)
+			}
 		} else {
 			if IgnoreFiles[filePath] {
 				continue
@@ -77,7 +74,8 @@ func ReadFiles(files []os.DirEntry, prefix string, tree map[string]*hashMap.Tree
 			files, err := os.ReadDir(filePath)
 
 			tree[filePath] = &hashMap.Tree{
-				SubTree: make(map[string]*hashMap.Tree),
+				HasSubTree: true,
+				SubTree:    make(map[string]*hashMap.Tree),
 			}
 
 			if err != nil {
@@ -88,20 +86,68 @@ func ReadFiles(files []os.DirEntry, prefix string, tree map[string]*hashMap.Tree
 	}
 }
 
-type Files map[string]*File
+func ReadTreeAndWriteFiles(tree hashMap.HashMap) {
+	type queueItem struct {
+		path string
+		tree hashMap.HashMap
+	}
+	// Create a queue
+	queue := make([]*queueItem, 0)
+	visited := make(map[string]bool)
 
-type File struct {
-	IsDir   bool
-	Name    string
-	Content string           // empty if IsDir is true
-	Trees   map[string]*File // empty if IsDir is false
-}
+	queue = append(queue, &queueItem{
+		path: ".",
+		tree: tree,
+	})
 
-func ReadObjects() {
-	// Read the objects from the .dar/objects directory
-}
+	for len(queue) > 0 {
+		// Dequeue
+		current := queue[0]
+		queue = queue[1:]
+		visited[current.path] = true
 
-type Tmp struct {
-	Key  string
-	Tree map[string]*hashMap.Tree
+		// Iterate over the current tree
+		for key, file := range current.tree {
+			if file.HasSubTree {
+				if !visited[key] {
+					// Create the directory
+					if err := os.MkdirAll(key, os.ModePerm); err != nil {
+						panic("Creating directory of the file system" + err.Error())
+					}
+					visited[key] = true
+				}
+				// Enqueue the subtree
+				queue = append(queue, &queueItem{path: key, tree: file.SubTree})
+			} else {
+				if !visited[key] {
+					// Create and write the file
+					contentPath := fmt.Sprintf(".dar/objects/%s", file.FileContent)
+					fmt.Println(contentPath)
+					compressedFile, err := os.Open(contentPath)
+					if err != nil {
+						panic(err)
+					}
+					defer compressedFile.Close()
+
+					reader, err := zlib.NewReader(compressedFile)
+					if err != nil {
+						panic("Reading contentFile content: " + err.Error())
+					}
+					defer reader.Close()
+
+					file, err := os.Create(key)
+					if err != nil {
+						panic("Creating file path: " + err.Error())
+					}
+					defer file.Close()
+
+					if _, err = io.Copy(file, reader); err != nil {
+						panic("copy from compressed file to repository file system: " + err.Error())
+					}
+
+					visited[key] = true
+				}
+			}
+		}
+	}
 }
