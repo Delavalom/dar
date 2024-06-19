@@ -10,11 +10,12 @@ build:
     	fi
     endif
 
-	rm -rf ../dar_test/*
-	mkdir -p ../dar_test/.dar
-	cp -R ./.dar/* ../dar_test/.dar/*
-
 run:
 	go run cmd/dar/main.go
 
-.PHONY: run build
+clone:
+	rm -rf ../dar_test/*
+	mkdir ../dar_test/.dar
+	cp -R ./.dar/ ../dar_test/.dar/
+
+.PHONY: run build clone
